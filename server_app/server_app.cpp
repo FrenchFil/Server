@@ -13,6 +13,8 @@
 #include <sys/types.h>
 #include <chrono>
 #include <thread>
+#include <fstream>
+#include <vector>
 //#include <sys/socket.h>
 #pragma comment(lib, "ws2_32.lib")
 
@@ -39,6 +41,8 @@ int main()
     myAddr.sin_port = htons(8080);
     myAddr.sin_addr.s_addr = INADDR_ANY;
 
+    char buffer[256];
+
     memset(myAddr.sin_zero, '\0', sizeof(myAddr.sin_zero));
 
     int binding = bind(sockfd, (struct sockaddr*)&myAddr, sizeof(myAddr));
@@ -62,10 +66,12 @@ int main()
 
     while (1)
     {
+        cout << "Server is running" << endl;
         struct sockaddr_storage their_addr;
         int addr_size = sizeof(their_addr);
         int fdClient = accept(sockfd, (struct sockaddr*)&their_addr, &addr_size);
-        cout << fdClient;
+
+
         if (fdClient < 0)
         {
             cout << "Accept problem:" << WSAGetLastError();
@@ -73,7 +79,31 @@ int main()
             WSACleanup();
             return 1;
         }
-        int recieve = send(fdClient, msg, strlen(msg),0);
+        cout << "client connected:" << fdClient << endl;
+        string fileName = "C:\\Users\\force\\OneDrive\\Pulpit\\passy_wordpress.txt";
+        ifstream file(fileName, ios::binary);
+        if (!file.is_open())
+        {
+            cout << "File didnt open";
+            closesocket(fdClient);
+            WSACleanup();
+            return 1;
+        }
+        string line;
+        size_t rret, wret;
+        int bytes_read;
+        file.seekg(0, ios::end);
+        streampos fileSize = file.tellg();
+        file.seekg(0, ios::beg);
+        vector<char> fileData(fileSize);
+        file.read(fileData.data(), fileSize);
+        for (int n : fileData)
+        {
+            cout << n << endl; 
+        }
+
+ 
+        int recieve = send(fdClient, fileData.data(), fileData.size(), 0);
         if (recieve < 0)
         {
             cout << "problem with sending : " << WSAGetLastError();
@@ -81,7 +111,7 @@ int main()
             WSACleanup();
             return 1;
         }
-     
+        file.close();
 
         closesocket(fdClient);
         //this_thread::sleep_for(chrono::milliseconds(1000));
